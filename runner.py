@@ -46,17 +46,11 @@ def open_file_dialog():
         return None
 
 def load_and_run_script(script_path, script_args):
-    globals_dict = {}
-    exports = dependencies.get_exports()
-    globals_dict.update(exports)
-
-    globals_dict["__file__"] = script_path
-    globals_dict["__name__"] = "__main__"
-
     sys.argv = [script_path] + script_args
 
     script_dir = os.path.dirname(os.path.abspath(script_path))
     utills_dir = ensure_utills_folder()
+
     if script_dir not in sys.path:
         sys.path.insert(0, script_dir)
     if utills_dir not in sys.path:
@@ -65,10 +59,12 @@ def load_and_run_script(script_path, script_args):
     try:
         spec = importlib.util.spec_from_file_location("__main__", script_path)
         module = importlib.util.module_from_spec(spec)
+        sys.modules["__main__"] = module
         spec.loader.exec_module(module)
     except Exception:
         print(f"[ERROR] Failed to run script: {script_path}")
         traceback.print_exc()
+
 
 def main():
     ensure_utills_folder()
