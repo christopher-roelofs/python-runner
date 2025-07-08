@@ -2,6 +2,7 @@ import os
 import sys
 import importlib.util
 import traceback
+import platform
 
 # Import dependencies
 from extensions import dependencies
@@ -25,11 +26,20 @@ def open_file_dialog():
         import tkinter as tk
         from tkinter import filedialog
 
-        tk.Tk().withdraw()  # Hide main window
+        root = tk.Tk()
+        root.withdraw()
+
+        if platform.system() == "Darwin":
+            # macOS-specific focus handling
+            root.lift()
+            root.attributes("-topmost", True)
+            root.after(100, lambda: root.focus_force())
+
         file_path = filedialog.askopenfilename(
             title="Select a Python Script to Run",
             filetypes=[("Python Files", "*.py")]
         )
+        root.destroy()
         return file_path
     except Exception as e:
         print(f"[ERROR] Failed to open file dialog: {e}")
