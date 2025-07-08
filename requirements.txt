@@ -1,0 +1,4 @@
+pyinstaller
+requests
+mysql-connector-python
+selenium
