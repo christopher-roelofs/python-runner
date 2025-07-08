@@ -3,34 +3,48 @@ import sys
 import importlib.util
 import traceback
 
-# Import dependencies from extensions package
+# Import dependencies
 from extensions import dependencies
 
 def ensure_utills_folder():
-    # Create 'utills' folder next to this runner.py (not in temp)
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        # Running inside PyInstaller bundle
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        # Running as normal python script
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+
     utills_path = os.path.join(base_dir, "utills")
     if not os.path.exists(utills_path):
         print(f"'utills' folder not found at {utills_path}, creating it.")
         os.makedirs(utills_path)
     return utills_path
 
+def open_file_dialog():
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+
+        tk.Tk().withdraw()  # Hide main window
+        file_path = filedialog.askopenfilename(
+            title="Select a Python Script to Run",
+            filetypes=[("Python Files", "*.py")]
+        )
+        return file_path
+    except Exception as e:
+        print(f"[ERROR] Failed to open file dialog: {e}")
+        return None
+
 def load_and_run_script(script_path, script_args):
-    # Prepare globals for script execution
     globals_dict = {}
-    
-    # Provide common libraries from dependencies.py exports
     exports = dependencies.get_exports()
     globals_dict.update(exports)
 
-    # Add __file__ and __name__ for the script context
     globals_dict["__file__"] = script_path
     globals_dict["__name__"] = "__main__"
 
-    # Adjust sys.argv for the script being run
     sys.argv = [script_path] + script_args
 
-    # Add script folder and utills folder to sys.path for local imports
     script_dir = os.path.dirname(os.path.abspath(script_path))
     utills_dir = ensure_utills_folder()
     if script_dir not in sys.path:
@@ -39,28 +53,33 @@ def load_and_run_script(script_path, script_args):
         sys.path.insert(0, utills_dir)
 
     try:
-        # Load the script as a module and execute it
         spec = importlib.util.spec_from_file_location("__main__", script_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
     except Exception:
-        print(f"Error running script: {script_path}")
+        print(f"[ERROR] Failed to run script: {script_path}")
         traceback.print_exc()
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: runner.py <script.py> [args...]")
-        print("Runs the specified Python script with shared dependencies.")
-        sys.exit(1)
+    ensure_utills_folder()
 
-    script_file = sys.argv[1]
-    script_args = sys.argv[2:]
+    if len(sys.argv) < 2:
+        print("[INFO] No script file provided. Opening file browser...")
+        script_file = open_file_dialog()
+        if not script_file:
+            print("[WARN] No file selected. Exiting.")
+            sys.exit(0)
+        script_args = []
+    else:
+        script_file = sys.argv[1]
+        script_args = sys.argv[2:]
 
     if not os.path.isfile(script_file):
-        print(f"Script file not found: {script_file}")
+        print(f"[ERROR] Script file not found: {script_file}")
         sys.exit(1)
 
     load_and_run_script(script_file, script_args)
 
 if __name__ == "__main__":
     main()
+    input("\nPress Enter to exit...")

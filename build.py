@@ -28,6 +28,7 @@ def build():
     pyinstaller_cmd = [
         "pyinstaller",
         "--onefile",
+        "--hidden-import=tkinter",
         f"--add-binary={chromedriver_path}:extensions/chrome_drivers",
         "runner.py"
     ]
@@ -35,7 +36,12 @@ def build():
     print("\n[INFO] Running PyInstaller command:")
     print(" ".join(pyinstaller_cmd))
 
-    subprocess.run(pyinstaller_cmd, check=True)
+    try:
+        subprocess.run(pyinstaller_cmd, check=True)
+        print("\n[SUCCESS] Build complete. Executable is in the 'dist' folder.")
+    except subprocess.CalledProcessError as e:
+        print(f"[ERROR] Build failed: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     build()
